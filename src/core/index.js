@@ -5,7 +5,8 @@ import {
   remove,
   getUniqId,
   addClass,
-  triggerEvent
+  triggerEvent,
+  loadScript,
 } from '../lib/util';
 
 const assign = require('es6-object-assign').assign;
@@ -80,6 +81,8 @@ export default class ModalVideo {
     const body = document.querySelector('body');
     const classNames = opt.classNames;
     const speed = opt.animationSpeed;
+    let ytApiLoadDef = null;
+    let vimeoApiLoadDef = null;
     [].forEach.call(selectors, (selector) => {
       selector.addEventListener('click', (event) => {
         if (selector.tagName === 'A') {
@@ -88,8 +91,9 @@ export default class ModalVideo {
         const videoId = selector.dataset.videoId;
         const channel = selector.dataset.channel || opt.channel;
         const id = getUniqId();
+        const containerId = 'modal-video-container-' + id;
         const videoUrl = selector.dataset.videoUrl || this.getVideoUrl(opt, channel, videoId);
-        const html = this.getHtml(opt, videoUrl, id);
+        const html = this.getHtml(opt, videoUrl, id, containerId);
         append(body, html);
         const modal = document.getElementById(id);
         const btn = modal.querySelector('.js-modal-video-dismiss-btn');
@@ -115,6 +119,31 @@ export default class ModalVideo {
         btn.addEventListener('click', () => {
           triggerEvent(modal, 'click');
         });
+        if(channel == 'youtube' && opt.enablejsapi){
+          if(! ytApiLoadDef){
+            ytApiLoadDef = loadScript('https://www.youtube.com/iframe_api');
+          }
+          ytApiLoadDef.then(() => {
+            btn.dataset.player = new YT.Player(document.getElementById(containerId), {
+              width: 460,
+              height: 230,
+              allowfullscreen: opt.allowFullScreen,
+              videoId: videoId,
+            });
+          });
+        }
+        else if(channel == 'vimeo' && opt.api){
+          if(! vimeoApiLoadDef){
+            vimeoApiLoadDef = loadScript('https://player.vimeo.com/api/player.js');
+          }
+          vimeoApiLoadDef.then(() => {
+            btn.dataset.player = new Vimeo.Player(containerId, {
+              width: 460,
+              height: 230,
+              id: videoId,
+            });
+          });
+        }
       });
     });
   }
@@ -160,7 +189,7 @@ export default class ModalVideo {
     return `//www.youtube.com/embed/${videoId}?${query}`;
   }
 
-  getFacebookUrl(facebook, videoId) {
+  getFacebookUrl(facebook, videoId, containerId) {
     return `//www.facebook.com/v2.10/plugins/video.php?href=https://www.facebook.com/facebook/videos/${videoId}&${this.getQueryString(facebook)}`;
   }
 
@@ -172,9 +201,12 @@ export default class ModalVideo {
         <div class="${classNames.modalVideoBody}">
           <div class="${classNames.modalVideoInner}">
             <div class="${classNames.modalVideoIframeWrap}" style="padding-bottom:${padding}">
-              <button class="${classNames.modalVideoCloseBtn} js-modal-video-dismiss-btn" aria-label="${opt.aria.dismissBtnMessage}"></button>
-              <iframe width='460' height='230' src="${videoUrl}" frameborder='0' allowfullscreen=${opt.allowFullScreen} tabindex="-1"/>
-            </div>
+              <button class="${classNames.modalVideoCloseBtn} js-modal-video-dismiss-btn" aria-label="${opt.aria.dismissBtnMessage}"></button>`
+              + ((opt.enablejsapi || opt.api) 
+                ? `<div id="${containerId}"></div>`
+                : `<iframe width='460' height='230' src="${videoUrl}" frameborder='0' allowfullscreen=${opt.allowFullScreen} tabindex="-1"/>`)
+              +
+            `</div>
           </div>
         </div>
       </div>
