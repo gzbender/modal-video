@@ -93,7 +93,7 @@ export default class ModalVideo {
         const id = getUniqId();
         const containerId = 'modal-video-container-' + id;
         const videoUrl = selector.dataset.videoUrl || this.getVideoUrl(opt, channel, videoId);
-        const html = this.getHtml(opt, videoUrl, id, containerId);
+        const html = this.getHtml(channel, opt, videoUrl, id, containerId);
         append(body, html);
         const modal = document.getElementById(id);
         const btn = modal.querySelector('.js-modal-video-dismiss-btn');
@@ -119,29 +119,37 @@ export default class ModalVideo {
         btn.addEventListener('click', () => {
           triggerEvent(modal, 'click');
         });
-        if(channel == 'youtube' && opt.enablejsapi){
+        if(channel == 'youtube' && opt.jsapi){
           if(! ytApiLoadDef){
-            ytApiLoadDef = loadScript('https://www.youtube.com/iframe_api');
+            ytApiLoadDef = new Promise((resolve, reject) => {
+              loadScript('https://www.youtube.com/iframe_api').then(() => {
+                YT.ready(resolve);
+              }).catch(reject);
+            });
           }
           ytApiLoadDef.then(() => {
-            btn.dataset.player = new YT.Player(document.getElementById(containerId), {
+            const player = new YT.Player(document.getElementById(containerId), {
               width: 460,
               height: 230,
               allowfullscreen: opt.allowFullScreen,
               videoId: videoId,
+              events: {
+                'onReady': () => { triggerEvent(selector, 'player-created', {player}); }
+              },
             });
           });
         }
-        else if(channel == 'vimeo' && opt.api){
+        else if(channel == 'vimeo' && opt.jsapi){
           if(! vimeoApiLoadDef){
             vimeoApiLoadDef = loadScript('https://player.vimeo.com/api/player.js');
           }
           vimeoApiLoadDef.then(() => {
-            btn.dataset.player = new Vimeo.Player(containerId, {
+            const player = new Vimeo.Player(containerId, {
               width: 460,
               height: 230,
               id: videoId,
             });
+            triggerEvent(selector, 'player-created', {player});
           });
         }
       });
@@ -193,7 +201,7 @@ export default class ModalVideo {
     return `//www.facebook.com/v2.10/plugins/video.php?href=https://www.facebook.com/facebook/videos/${videoId}&${this.getQueryString(facebook)}`;
   }
 
-  getHtml(opt, videoUrl, id) {
+  getHtml(channel, opt, videoUrl, id, containerId) {
     const padding = this.getPadding(opt.ratio);
     const classNames = opt.classNames;
     return (`
@@ -202,7 +210,7 @@ export default class ModalVideo {
           <div class="${classNames.modalVideoInner}">
             <div class="${classNames.modalVideoIframeWrap}" style="padding-bottom:${padding}">
               <button class="${classNames.modalVideoCloseBtn} js-modal-video-dismiss-btn" aria-label="${opt.aria.dismissBtnMessage}"></button>`
-              + ((opt.enablejsapi || opt.api) 
+              + (opt.jsapi 
                 ? `<div id="${containerId}"></div>`
                 : `<iframe width='460' height='230' src="${videoUrl}" frameborder='0' allowfullscreen=${opt.allowFullScreen} tabindex="-1"/>`)
               +

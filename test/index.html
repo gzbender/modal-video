@@ -21,8 +21,10 @@
 		$(".js-video-button").modalVideo({
 			youtube:{
 				controls:0,
-				nocookie: true
-			}
+			},
+			jsapi: true,
+		}).on('player-created', function(e){
+			console.log(e.detail.player);
 		});
 	</script>
 </body>

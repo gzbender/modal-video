@@ -27,7 +27,7 @@ export const addClass = (element, className) => {
 export const triggerEvent = (el, eventName, options) => {
   let event;
   if (window.CustomEvent) {
-    event = new CustomEvent(eventName, { cancelable: true });
+    event = new CustomEvent(eventName, { cancelable: true, detail: options });
   } else {
     event = document.createEvent('CustomEvent');
     event.initCustomEvent(eventName, false, false, options);
