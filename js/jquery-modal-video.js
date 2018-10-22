@@ -305,6 +305,7 @@ var ModalVideo = function () {
             player.ready().then(function () {
               (0, _util.triggerEvent)(selector, 'player-created', { player: player });
               if (opt.vimeo.autoplay) {
+                // Not working in Chrome 66+ without setVolume(0) before
                 player.play();
               }
             });
