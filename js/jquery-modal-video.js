@@ -278,29 +278,36 @@ var ModalVideo = function () {
             });
           }
           ytApiLoadDef.then(function () {
-            var player = new YT.Player(document.getElementById(containerId), {
+            var player = new YT.Player(document.getElementById(containerId), assign({
               width: 460,
               height: 230,
-              allowfullscreen: opt.allowFullScreen,
               videoId: videoId,
               events: {
                 'onReady': function onReady() {
                   (0, _util.triggerEvent)(selector, 'player-created', { player: player });
+                  if (opt.youtube.autoplay) {
+                    player.playVideo();
+                  }
                 }
               }
-            });
+            }, opt));
           });
         } else if (channel == 'vimeo' && opt.jsapi) {
           if (!vimeoApiLoadDef) {
             vimeoApiLoadDef = (0, _util.loadScript)('https://player.vimeo.com/api/player.js');
           }
           vimeoApiLoadDef.then(function () {
-            var player = new Vimeo.Player(containerId, {
+            var player = new Vimeo.Player(containerId, assign({
               width: 460,
               height: 230,
               id: videoId
+            }, opt));
+            player.ready().then(function () {
+              (0, _util.triggerEvent)(selector, 'player-created', { player: player });
+              if (opt.vimeo.autoplay) {
+                player.play();
+              }
             });
-            (0, _util.triggerEvent)(selector, 'player-created', { player: player });
           });
         }
       });

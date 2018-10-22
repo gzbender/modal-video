@@ -21,6 +21,10 @@
 		$(".js-video-button").modalVideo({
 			youtube:{
 				controls:0,
+				autoplay: 1,
+			},
+			vimeo: {
+				autoplay: true,
 			},
 			jsapi: true,
 		}).on('player-created', function(e){

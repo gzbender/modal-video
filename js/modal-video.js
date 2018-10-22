@@ -218,7 +218,7 @@ var ModalVideo = function () {
         var id = (0, _util.getUniqId)();
         var containerId = 'modal-video-container-' + id;
         var videoUrl = selector.dataset.videoUrl || _this.getVideoUrl(opt, channel, videoId);
-        var html = _this.getHtml(opt, videoUrl, id, containerId);
+        var html = _this.getHtml(channel, opt, videoUrl, id, containerId);
         (0, _util.append)(body, html);
         var modal = document.getElementById(id);
         var btn = modal.querySelector('.js-modal-video-dismiss-btn');
@@ -244,28 +244,38 @@ var ModalVideo = function () {
         btn.addEventListener('click', function () {
           (0, _util.triggerEvent)(modal, 'click');
         });
-        if (channel == 'youtube' && opt.enablejsapi) {
+        if (channel == 'youtube' && opt.jsapi) {
           if (!ytApiLoadDef) {
-            ytApiLoadDef = (0, _util.loadScript)('https://www.youtube.com/iframe_api');
+            ytApiLoadDef = new Promise(function (resolve, reject) {
+              (0, _util.loadScript)('https://www.youtube.com/iframe_api').then(function () {
+                YT.ready(resolve);
+              }).catch(reject);
+            });
           }
           ytApiLoadDef.then(function () {
-            btn.dataset.player = new YT.Player(document.getElementById(containerId), {
+            var player = new YT.Player(document.getElementById(containerId), {
               width: 460,
               height: 230,
               allowfullscreen: opt.allowFullScreen,
-              videoId: videoId
+              videoId: videoId,
+              events: {
+                'onReady': function onReady() {
+                  (0, _util.triggerEvent)(selector, 'player-created', { player: player });
+                }
+              }
             });
           });
-        } else if (channel == 'vimeo' && opt.api) {
+        } else if (channel == 'vimeo' && opt.jsapi) {
           if (!vimeoApiLoadDef) {
             vimeoApiLoadDef = (0, _util.loadScript)('https://player.vimeo.com/api/player.js');
           }
           vimeoApiLoadDef.then(function () {
-            btn.dataset.player = new Vimeo.Player(containerId, {
+            var player = new Vimeo.Player(containerId, {
               width: 460,
               height: 230,
               id: videoId
             });
+            (0, _util.triggerEvent)(selector, 'player-created', { player: player });
           });
         }
       });
@@ -325,10 +335,10 @@ var ModalVideo = function () {
     }
   }, {
     key: 'getHtml',
-    value: function getHtml(opt, videoUrl, id) {
+    value: function getHtml(channel, opt, videoUrl, id, containerId) {
       var padding = this.getPadding(opt.ratio);
       var classNames = opt.classNames;
-      return '\n      <div class="' + classNames.modalVideo + '" tabindex="-1" role="dialog" aria-label="' + opt.aria.openMessage + '" id="' + id + '">\n        <div class="' + classNames.modalVideoBody + '">\n          <div class="' + classNames.modalVideoInner + '">\n            <div class="' + classNames.modalVideoIframeWrap + '" style="padding-bottom:' + padding + '">\n              <button class="' + classNames.modalVideoCloseBtn + ' js-modal-video-dismiss-btn" aria-label="' + opt.aria.dismissBtnMessage + '"></button>' + (opt.enablejsapi || opt.api ? '<div id="' + containerId + '"></div>' : '<iframe width=\'460\' height=\'230\' src="' + videoUrl + '" frameborder=\'0\' allowfullscreen=' + opt.allowFullScreen + ' tabindex="-1"/>') + '</div>\n          </div>\n        </div>\n      </div>\n    ';
+      return '\n      <div class="' + classNames.modalVideo + '" tabindex="-1" role="dialog" aria-label="' + opt.aria.openMessage + '" id="' + id + '">\n        <div class="' + classNames.modalVideoBody + '">\n          <div class="' + classNames.modalVideoInner + '">\n            <div class="' + classNames.modalVideoIframeWrap + '" style="padding-bottom:' + padding + '">\n              <button class="' + classNames.modalVideoCloseBtn + ' js-modal-video-dismiss-btn" aria-label="' + opt.aria.dismissBtnMessage + '"></button>' + (opt.jsapi ? '<div id="' + containerId + '"></div>' : '<iframe width=\'460\' height=\'230\' src="' + videoUrl + '" frameborder=\'0\' allowfullscreen=' + opt.allowFullScreen + ' tabindex="-1"/>') + '</div>\n          </div>\n        </div>\n      </div>\n    ';
     }
   }]);
 
@@ -378,7 +388,7 @@ var addClass = exports.addClass = function addClass(element, className) {
 var triggerEvent = exports.triggerEvent = function triggerEvent(el, eventName, options) {
   var event = void 0;
   if (window.CustomEvent) {
-    event = new CustomEvent(eventName, { cancelable: true });
+    event = new CustomEvent(eventName, { cancelable: true, detail: options });
   } else {
     event = document.createEvent('CustomEvent');
     event.initCustomEvent(eventName, false, false, options);

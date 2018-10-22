@@ -128,15 +128,19 @@ export default class ModalVideo {
             });
           }
           ytApiLoadDef.then(() => {
-            const player = new YT.Player(document.getElementById(containerId), {
+            const player = new YT.Player(document.getElementById(containerId), assign({
               width: 460,
               height: 230,
-              allowfullscreen: opt.allowFullScreen,
               videoId: videoId,
               events: {
-                'onReady': () => { triggerEvent(selector, 'player-created', {player}); }
+                'onReady': () => { 
+                  triggerEvent(selector, 'player-created', {player});
+                  if(opt.youtube.autoplay){
+                    player.playVideo();
+                  }
+                }
               },
-            });
+            }, opt));
           });
         }
         else if(channel == 'vimeo' && opt.jsapi){
@@ -144,12 +148,18 @@ export default class ModalVideo {
             vimeoApiLoadDef = loadScript('https://player.vimeo.com/api/player.js');
           }
           vimeoApiLoadDef.then(() => {
-            const player = new Vimeo.Player(containerId, {
+            const player = new Vimeo.Player(containerId, assign({
               width: 460,
               height: 230,
               id: videoId,
+            }, opt));
+            player.ready().then(() => {
+              triggerEvent(selector, 'player-created', {player});
+              if(opt.vimeo.autoplay){
+                // Not working in Chrome 66+ without setVolume(0) before
+                player.play();
+              }
             });
-            triggerEvent(selector, 'player-created', {player});
           });
         }
       });
